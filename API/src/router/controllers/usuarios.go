@@ -4,9 +4,9 @@ import (
 	"api/src/banco"
 	"api/src/modelos"
 	"api/src/repositorios"
+	"api/src/respostas"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 )
 
@@ -14,21 +14,33 @@ import (
 func CriarUsuario(w http.ResponseWriter, r *http.Request) {
 	corpoRequest, erro := io.ReadAll(r.Body)
 	if erro != nil {
-		log.Fatal(erro)
+		respostas.Erro(w, http.StatusUnprocessableEntity, erro)
+		return
 	}
 
 	var usuario modelos.Usuario
 	if erro = json.Unmarshal(corpoRequest, &usuario); erro != nil {
-		log.Fatal(erro)
+		respostas.Erro(w, http.StatusBadRequest, erro)
+	}
+
+	if erro = usuario.Preparar(); erro != nil {
+		respostas.Erro(w, http.StatusBadRequest, erro)
 	}
 
 	db, erro := banco.Conectar() // Abre a conexao com o banco
 	if erro != nil {
-		log.Fatal(erro)
+		respostas.Erro(w, http.StatusInternalServerError, erro)
+		return
 	}
+	defer db.Close()
 
 	repositorio := repositorios.NovoRepositorioDeUsuarios(db) // Cria o repositorio e passa o banco pra dentro desse repositorio
-	repositorio.Criar(usuario)                                // Cria o usuario que vem na requisicao
+	usuario.ID, erro = repositorio.Criar(usuario)             // Cria o usuario que vem na requisicao
+	if erro != nil {
+		respostas.Erro(w, http.StatusInternalServerError, erro)
+	}
+
+	respostas.JSON(w, http.StatusCreated, usuario)
 
 }
 
