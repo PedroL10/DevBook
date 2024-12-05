@@ -34,7 +34,7 @@ func ValidarToken(r *http.Request) error {
 		return nil
 	}
 
-	return errors.New("Token inválido")
+	return errors.New("Token inválido!")
 }
 
 // ExtrairUsuarioID retorna o usuarioId que está salvo no token
